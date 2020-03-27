@@ -1,0 +1,165 @@
+<!--Section: Tutorial content-->
+<section class="tutorial" id="databases">
+
+  <section id="pwa-shell">
+    <h2 class="title mb-4">
+      <strong>The App Shell Model</strong>
+    </h2>
+
+    <p class="description">
+      Our app looks great, but there is always room for improvement. If we want to compete with native apps, we have to
+      work on our app <strong>load time</strong>.</p>
+
+    <p>If you test your website on a fast internet connection, you may have not noticed the blank screen - but it is there, even more so when user with a lousy signal downloads our monolithic JavaScript file.</p>
+
+    <figure class="figure">
+      <img class="img-fluid my-2"
+        src="https://mdbootstrap.com/wp-content/themes/mdbootstrap4/content/vue/tutorials/vue-pwa/6/throttling.png"
+        alt="Throttling settings">
+      <figcaption class="figure-caption text-center">You can emulate slow network connections from the Network
+        Throttling menu in the Chrome browser dev tools or Firefox's.</figcaption>
+    </figure>
+
+    <p>It's because of how modern single page apps work - at the first load, we serve the <code>index.html</code> file,
+      which for now is just a blank page with <code>div#app</code>. Next, the JS bundle is downloaded and then it has to
+      boot up our Vue application. This approach lets us make our website dynamic, immersive and interactive, but the
+      downside is that it significantly increases load time.</p>
+
+    <p>As developers, it is our duty to consider every user, who may live in the areas where the network speed is
+      not so impressive. We want to ensure that all users have the best possible experience.</p>
+
+    <p>In today's lesson, I want to introduce you to the concept of the App Shell.</p>
+
+    <h4 class="mt-5"><strong>The App Shell</strong></h4>
+
+    <p>The Application Shell architecture is a concept of separating the content of your app from the UI shared across
+      different views. In other words - the app shell is a part of the app which does not change often. We want the
+      minimum HTML and CSS to display something meaningful to the user as soon as possible. The first load should be
+      extremely quick and then get immediately cashed. The JS bundle is always too big, as well - let's reduce it.</p>
+
+    <p>1. Let's remove our stylesheets import in the <code>src/main.js</code> file and replace them with link tags in
+      the root folder's <code>index.html</code>'s head tag. We are doing it so that the critical resources can be
+      fetched quick, along the initial markup and without waiting for our heavy-weight JS.</p>
+
+    <mdbsnippet>
+      <code data-lang="js" data-name="./index.html">
+        <!-- Bootstrap core CSS -->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.2.1/css/bootstrap.min.css"
+          rel="stylesheet">
+        <!-- Material Design Bootstrap -->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.7.1/css/mdb.min.css" rel="stylesheet">
+      </code>
+    </mdbsnippet>
+
+    <section>
+      <blockquote class="blockquote bq-warning my-2">
+        <p class="bq-title">Note!</p>
+        <p>Since we will be <code>linking</code> to the stylesheets directly in our <code>index.html</code>, there is no
+          need for mentioning <code>bootstrap</code>'s CSS for the second time, as a dependency in our
+          <code>package.json</code>. Feel free to delete it from there. Remember to <code>yarn</code> the project if you do.</p>
+      </blockquote>
+    </section>
+
+    <p>2. Using browser dev tools, copy the HTML code of our app. Paste it inside <code>div#app</code> in the root
+      directory's <code>index.html</code>.</p>
+
+    <div class="text-center"> <img class="img-fluid"
+        src="https://mdbootstrap.com/wp-content/themes/mdbootstrap4/content/vue/tutorials/vue-pwa/6/copy.png"
+        alt="Copy HTML"></div>
+
+    <p>The markup copied that way will have Vue-specific hash-named attributes starting with <code>data-v-{hash}</code>.
+      Their purpose has to do internal workings of the framework - they are used to seamlessly identify DOM elements.
+      You don't have to worry about them being there, feel free to keep them or delete. The easiest way is to find all
+      places a particular attribute appears is either by using a search tool or, in newer versions of VSCode, by
+      selecting one and keep on pressing <code>Ctrl + D</code> to select the others, then <code>Del / Backspace</code>.
+      To skip this manual labour have a look below, where a markup that has already been tidied up is presented.</p>
+
+    <p>See the class-less, id-less div beneath the <code>Today:</code> header? These are our events - live, dynamic,
+      fetched from a server, cache or <code>localStorage</code>. Right now we are working on the static HTML, one to be
+      displayed before anything else happens - it has no idea about events to display, as it did not have a chance to
+      ask the backend about them yet. This is why, instead of pretending we know stuff we really don't, let's give our
+      users an indication of progress during the initial app load. Delete these pesky events' markup in their
+      class-less, id-less tags and paste the code for a Bootstrap loader instead.</p>
+
+    <mdbsnippet>
+      <code data-lang="js" data-name="markup">
+        <div class="d-flex justify-content-center">
+          <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+          </div>
+        </div>
+      </code>
+    </mdbsnippet>
+
+    <p>Way better. Now refresh the page - for a brief moment, you should see our app with a loader. When the JavaScript
+      finishes downloading and the initialisation process kicks in, Vue will generate content to replace whatever is
+      happening in the <code>div#app</code> element.</p>
+
+    <p>Right, now a complete <code>./index.html</code> code should look something like this:</p>
+
+    <mdbsnippet>
+      <code data-lang="html" data-name="./index.html">
+        <!DOCTYPE html>
+        <html>
+
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1.0">
+          <title>mdbvue</title>
+          <script src="https://maps.googleapis.com/maps/api/js" async></script>
+          <link rel="manifest" href="/static/manifest.json" />
+          <!-- Bootstrap core CSS -->
+          <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.2.1/css/bootstrap.min.css"
+            rel="stylesheet">
+          <!-- Material Design Bootstrap -->
+          <link href="https://cdnjs.cloudflare.com/ajax/libs/mdbootstrap/4.7.1/css/mdb.min.css" rel="stylesheet">
+        </head>
+
+        <body>
+          <div id="app">
+            <div class="container">
+              <div class="row">
+                <div class="col-9">
+                  <h2 class="text-uppercase my-3">Today:</h2>
+                  <div class="d-flex justify-content-center">
+                    <div class="spinner-border" style="width: 3rem; height: 3rem;" role="status">
+                      <span class="sr-only">Loading...</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-3">
+                  <h3 class="text-uppercase my-3">Schedule</h3>
+                  <h6 class="my-3">
+                    It's going to be busy that today. You have <b>4 events</b> today.
+                  </h6>
+                  <h1 class="my-3">
+                    <div class="row">
+                      <div class="text-center col-3"><i class="far fa-sun"></i></div>
+                      <div class="col-9">Sunny</div>
+                    </div>
+                    <div class="row">
+                      <div class="text-center col-3"><i class="fas fa-thermometer-three-quarters"></i></div>
+                      <div class="col-9">23°C</div>
+                    </div>
+                  </h1>
+                  <p>
+                    Don't forget your sunglasses. Today will dry and sunny, becoming warm in the afternoon with
+                    temperatures of between 20 and 25 degrees.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- built files will be auto injected -->
+        </body>
+
+        </html>
+      </code>
+    </mdbsnippet>
+
+    <p>And this is how we let our users know stuff is happening in the background! Deploy this new, sweet feature using
+      <code>yarn deploy</code>.</p>
+
+      <p class="description">Something doesn't work for you? Check the code for this lesson on our <a
+        href="https://github.com/mdbootstrap/Vue-Tutorial-PWA/archive/master.zip">repository</a></p>
+  </section>

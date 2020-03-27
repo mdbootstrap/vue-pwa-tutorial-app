@@ -1,0 +1,538 @@
+<!--Section: Tutorial content-->
+<style>
+  .tutorial img {
+    margin-bottom: 2rem;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    object-fit: contain;
+    width: 50%;
+  }
+</style>
+
+<section class="tutorial">
+  <section id="pwa-offline">
+    <!--Title-->
+    <h2 class="title mb-4">
+      <strong>Working Offline</strong>
+    </h2>
+
+    <p class="description">Now, we are going to add an indicator to inform our users that the internet connection has
+      been lost. Firstly, though, let's have an overview of what's needed for the component to work. Let's start with
+      the underlying logic.</p>
+
+    <p class="discription">How does an app even know that the digital flow that has brought it to browser is no longer
+      there? With JavaScript it's fairly simple. The Navigator interface represents the state and the identity
+      of the user agent. It allows scripts to query it and to register themselves to carry on some activities. To ask it
+      whether we're using internet to connect to the current page, try:</p>
+    <mdbsnippet>
+      <code data-lang="js" data-name="console">
+        navigator.onLine
+      </code>
+    </mdbsnippet>
+
+    <p class="description">The above returns a boolean answer, that should be <code>false</code> for stuff served from
+      our own webserver (localhost). The solution is not that useful, though - we do not want to be monitoring the
+      status every given interval - in fact, we do not care about it until the very moment it changes. And when it
+      finally does, we want to react and vue the notification. Yes, it was a pun. Haha. So, how do we do that?</p>
+
+    <p class="discription">
+      When the <code>navigator.onLine</code>'s value changes, the Window interface fires an event, either
+      <code>online</code> or <code>offline</code>. That means that we can listen to it!
+    </p>
+
+    <mdbsnippet>
+      <code data-lang="js" data-name="my-new-mixtape">
+        window.addEventListener('online', (event) => {
+          console.log("You are now connected to the network.");
+        });
+      </code>
+    </mdbsnippet>
+
+    <blockquote class="blockquote bq-warning my-2">
+      <p class="bq-title">Note</p>
+      <p>Please note that this event is inherently unreliable. 'Nuff said that a computer can be connected to a network
+        and not have Internet access.</p>
+    </blockquote>
+
+    <p class="description">Time to get to work! We will begin with gearing up our <code>App.vue</code> file with some
+      useful logic. Let's start by adding event listeners to the Window interface on the App's <code>created</code>
+      life-cycle hook, so they can start listening to the <code>online</code> / <code>offline</code> events. The second
+      thing are the callbacks - we want them to help us monitor changes in connection. For that, we need a legit
+      <code>data</code> object property on our <code>App</code> component. I called it <code>status</code>,
+      but obviously you can call it whatever you want - as long as you stay consistent throughout the code.</p>
+
+    <mdbsnippet>
+      <code data-lang="js" data-name="App.vue">
+        // very bottom of the data object
+            status: ''
+          };
+        },
+        created() {
+          window.addEventListener('online', () => {
+            this.status = 'online';
+          });
+
+          window.addEventListener('offline', () => {
+            this.status = 'offline';
+          });
+        },
+        // component's methods...
+      </code>
+    </mdbsnippet>
+
+    <p class="description">Our app can already tell when it gets disconnected! You can check it out yourself by first
+      going offline (the <code>Network</code> tab of devTools) and then checking out how the data inside changes
+      (through <code>console.log</code>ging the <code>this.status</code> property in the callback or by watching the
+      actual data change in the Vue extension devTools panel).</p>
+
+    <p class="description">That's awesome, but while the app can tell that something changed, our users cannot. We need
+      to consume the data to gain its powers; to pass the knowledge of the <code>status</code> down the DOM tree, where
+      hopefully we'll have a component to display it. Actually, why not crate one now?</p>
+
+    <p class="discription">Let's go to the <code>src/components</code> directory and create a
+      <code>Notificaion.vue</code> file (then again, you can call it <code>Whatever.vue</code>, just stick to it). There
+      is a number of reasons why we would want to have it in a separate file - encapsulation, making use of the elegant,
+      <code>.vue</code> Single File Components, keeping <code>App.vue</code> tidy are some of the most important. You
+      are free to design this notification as you wish, it's the underlying logic that's important. In our example, we
+      will use a MDBootstrap Alert component for the nice looks & animations.</p>
+
+    <mdbsnippet>
+      <code data-lang="js" data-name="Notification.vue - script tag">
+        &lt;script&gt;
+        import { mdbAlert } from 'mdbvue';
+
+        export default {
+          name: "Notification",
+          components: {
+            mdbAlert
+          },
+          props: {
+            status: String
+          },
+          data() {
+            return {
+              availableStatuses: {
+                offline: {
+                  color: 'danger',
+                  emoji: '☢️',
+                  text: 'Offline mode engaged.'
+                },
+                online: {
+                  color: 'success',
+                  emoji: '👌',
+                  text: 'Back online!'
+                }
+              },
+              isShown: false,
+            }
+          },
+          methods: {
+            showAlert() {
+              this.isShown = true;
+              const timeout = setTimeout(this.hideAlert, 3000);
+            },
+            hideAlert() {
+              this.isShown = false;
+            }
+          },
+          watch: {
+            status() {
+              this.showAlert();
+            }
+          }
+        }
+        &lt;/script&gt;
+      </code>
+    </mdbsnippet>
+
+
+    <p class="discription">Let's walk through the component together. We import the <code>mdbAlert</code> from
+      <code>mdbvue</code> library and declare it as a component used. Next, we declare the anticipated prop, which is the
+      <code>status</code> string. The data object has two properties - <code>availableStatuses</code> object and
+      <code>isShown</code> boolean. First one is used to store possible statuses - for now there is only <code>online</code>
+      and <code>offline</code>, but as your app grows, there might be a need to enhance the object, perhaps even to
+      import it from an external file.</p>
+
+    <p class="discription">The other one, <code>isShown</code>, will be used to toggle visibility of mdbAlert. We don't
+      want our notifications being shown all the time, right? To toggle the boolean we will be using the subsequent
+      <code>showAlert</code> and <code>hideAlert</code> methods. For our component, showing means turning the
+      <code>isShown</code> value to <code>true</code> and setting a timeout of <code>3000</code> miliseconds after which
+      it will be turned back to <code>false</code>.</p>
+
+    <p class="discription">Finally - the watcher. We need it to have an eye for the prop change. "But Vue is smart, it
+      can detect props change and act upon it without explicitly asking it for it!", I heard a voice coming from the
+      second row. It is true - Vue can indeed watch props change for our convenience, but it does not (and should not!)
+      do that for every single moving part. It does that by itself only when the prop seems directly involved in the
+      rendering process through directives or when the change can potentially affect data structure in the component, as
+      is the case with <code>computed</code> properties.</p>
+
+    <p class="discription"><code>Notification</code>'s case id different - it's us who are calling the shots. The
+      component is consuming the <code>status</code> props indirectly, as rendering is controlled through an internal
+      <code>setTimout</code> mechanism. Vue needs to be told explicitly to <code>watch</code> for the prop changes, and
+      once they take place, we want to respond by calling the <code>this.showAlert()</code> method. That's it for our
+      script tag, the hardest part is behind us!</p>
+
+    <mdbsnippet>
+      <code data-lang="html" data-name="Notification.vue - template tag">
+        &lt;template&gt;
+        <mdb-alert v-if="isShown" :color="availableStatuses[status].color" enterAnimation="bounceIn"
+          leaveAnimation="slideOutRight">
+          <span role="img" aria-label="emoji">
+            {{availableStatuses[status].emoji}}
+          </span>
+          {{availableStatuses[status].text}}
+        </mdb-alert>
+        &lt;/template&gt;
+      </code>
+    </mdbsnippet>
+
+    <p class="discription">Now, as of the tamplete tag, it might seem complex, but in truth it's pretty
+      straight-forward. As we mentioned, we're using <code>mdbAlert</code> as a base. The most important thing to note
+      here is the <code>v-if</code> directive, which allows us to conditionally render the underlying component
+      depending on whether the <code>isShown</code> boolean evaluates to <code>true</code> in any given mement. Second,
+      the <code>:color</code> bound attribute. <code>mdbAlert</code> normally takes a <code>color</code> prop to
+      customize its, well, color (see available colors <a href="https://mdbootstrap.com/docs/vue/css/colors/">here</a>).
+      The colon at the beginning makes the prop "bound", meaning instead of passing in a name of an actual color, the
+      attribute's value will be evaluated as a JavaScript expression, in a potentially dynamic fashion. We do not
+      know what the color the <code>mdbAlert</code> should be, so we are using a computed property name (the square
+      brackets) to access <code>availableStatuses</code> data object and pick a color depending on the status at hand.
+    </p>
+
+    <p class="discription">The <code>enterAnimation</code> & <code>leaveAnimation</code> are props used to customize the
+      animations as <code>mdbAlert</code> component comes and goes. I used <code>bounceIn</code> and
+      <code>slideOutRight</code> because I think they look cool, but feel free to pick your own from <a
+        href="https://mdbootstrap.com/docs/vue/css/animations/">MDBVue Animations page</a>.</p>
+
+    <p class="discription">Lastly, we are using the same computed property name trick to fill in for notification's
+      emoji and text.</p>
+
+    <mdbsnippet>
+      <code data-lang="css" data-name="Notification.vue - style tag">
+        &lt;style scoped&gt;
+        .alert {
+          position: absolute;
+          z-index: 2;
+          right: 0;
+
+        }
+        .alert span {
+          margin-right: 10px;
+        }
+        &lt;/style&gt;
+      </code>
+    </mdbsnippet>
+
+    <p class="discription">Finally, some styling, and most notably - the <code>position: absolute</code> CSS rule. Now
+      our component will appear in the top right corner of the screen without distracting natural flow of elements
+      positioned relatively. The component is ready!</p>
+
+    <mdbsnippet>
+      <code data-lang="js" data-name="App.vue">
+        &lt;template&gt;
+        &lt;mdb-container&gt;
+        &lt;Notification :status="status"/&gt;
+        ...
+        &lt;script&gt;
+        import Notification from '@/components/Notification';
+        ...
+        components: {
+          Notification,
+          ...
+        }
+      </code>
+    </mdbsnippet>
+
+    <p class="discription">There is only one thing left to do - include our baby into the parent
+      <code>App.vue</code> component. Let's open the file, <code>import Notification from
+        '@/components/Notification';</code> and register it by including it in the <code>components</code> field. Let's
+      add it to the <code>App.vue</code>'s <code>&lt;template&gt;</code> tag as a direct <code>mdbContainer</code>'s
+      child. Make sure that our key prop, <code>status</code>, is passed to it in a bound (dynamic) way by preceding
+      prop name with a colon.</p>
+
+    <p class="discription">Open your app and try to turn-on and turn-off your internet connection. You should see
+      something similar to this:
+
+      <div class="d-flex justify-content-center"> <img class="img-fluid mr-2"
+          src="https://mdbootstrap.com/wp-content/themes/mdbootstrap4/content/vue/tutorials/vue-pwa/5/offline.png"
+          alt="Offline Mode"><img class="img-fluid"
+          src="https://mdbootstrap.com/wp-content/themes/mdbootstrap4/content/vue/tutorials/vue-pwa/5/online.png"
+          alt="Online Mode"></div>
+    </p>
+
+    <p class="discription">Voilà! Let's deploy with <code>yarn deploy</code>.</p>
+
+    <p>In case things went a bit south, below is the full code for both <code>App.vue</code> and
+      <code>componens/Notification.vue</code>:</p>
+
+    <mdbsnippet>
+      <code data-lang="js" data-name="src/App.vue">
+        &lt;template&gt;
+          &lt;mdb-container&gt;
+            &lt;Notification :status="status"/&gt;
+            &lt;mdb-row&gt;
+              &lt;mdb-col col="9"&gt;
+                &lt;h2 class="text-uppercase my-3"&gt;Today:&lt;/h2&gt;
+                &lt;Event
+                  v-for="(event, index) in events"
+                  :index="index"
+                  :time="event.time"
+                  :title="event.title"
+                  :location="event.location"
+                  :description="event.description"
+                  :key="index"
+                  @delete="handleDelete"
+                  /&gt;
+                &lt;mdb-row&gt;
+                  &lt;mdb-col xl="3" md="6" class="mx-auto text-center"&gt;
+                    &lt;mdb-btn color="info" @click.native="modal = true"&gt;Add Event&lt;/mdb-btn&gt;
+                  &lt;/mdb-col&gt;
+                &lt;/mdb-row&gt;
+              &lt;/mdb-col&gt;
+              &lt;mdb-col col="3"&gt;
+                &lt;h3 class="text-uppercase my-3"&gt;Schedule&lt;/h3&gt;
+                &lt;h6 class="my-3"&gt;
+                It's going to be busy that today. You have
+                &lt;b&gt;{{events.length}} events&lt;/b&gt; today.
+                &lt;/h6&gt;
+                &lt;h1 class="my-3"&gt;
+                  &lt;mdb-row&gt;
+                    &lt;mdb-col col="3" class="text-center"&gt;
+                      &lt;mdb-icon far icon="sun"/&gt;
+                    &lt;/mdb-col&gt;
+                      &lt;mdb-col col="9"&gt;Sunny&lt;/mdb-col&gt;
+                    &lt;/mdb-row&gt;
+                    &lt;mdb-row&gt;
+                    &lt;mdb-col col="3" class="text-center"&gt;
+                      &lt;mdb-icon icon="thermometer-three-quarters"/&gt;
+                    &lt;/mdb-col&gt;
+                    &lt;mdb-col col="9"&gt;23°C&lt;/mdb-col&gt;
+                  &lt;/mdb-row&gt;
+                &lt;/h1&gt;
+                &lt;p&gt;
+                  Don't forget your sunglasses. Today will dry and sunny, becoming
+                  warm in the afternoon with temperatures of between 20 and 25
+                  degrees.
+                &lt;/p&gt;
+              &lt;/mdb-col&gt;
+            &lt;/mdb-row&gt;
+
+            &lt;mdb-modal v-if="modal" @close="modal = false"&gt;
+              &lt;mdb-modal-header&gt;
+                &lt;mdb-modal-title tag="h4" class="w-100 text-center font-weight-bold"&gt;Add new event&lt;/mdb-modal-title&gt;
+              &lt;/mdb-modal-header&gt;
+              &lt;mdb-modal-body&gt;
+                &lt;form class="mx-3 grey-text"&gt;
+                  &lt;mdb-input
+                  name="time"
+                  label="Time"
+                  icon="clock"
+                  placeholder="12:30"
+                  type="text"
+                  @input="handleInput($event, 'time')"
+                  /&gt;
+                  &lt;mdb-input
+                  name="title"
+                  label="Title"
+                  icon="edit"
+                  placeholder="Briefing"
+                  type="text"
+                  @input="handleInput($event, 'title')"
+                  /&gt;
+                  &lt;mdb-input
+                  name="location"
+                  label="Location (optional)"
+                  icon="map"
+                  type="text"
+                  @input="handleInput($event, 'location')"
+                  /&gt;
+                  &lt;mdb-textarea
+                  name="description"
+                  label="Description (optional)"
+                  icon="sticky-note"
+                  @input="handleInput($event, 'description')"
+                  /&gt;
+                &lt;/form&gt;
+              &lt;/mdb-modal-body&gt;
+              &lt;mdb-modal-footer class="justify-content-center"&gt;
+                &lt;mdb-btn color="info" @click.native="addEvent"&gt;Add&lt;/mdb-btn&gt;
+              &lt;/mdb-modal-footer&gt;
+            &lt;/mdb-modal&gt;
+          &lt;/mdb-container&gt;
+        &lt;/template&gt;
+
+        &lt;script&gt;
+        import {
+          mdbContainer,
+          mdbRow,
+          mdbCol,
+          mdbIcon,
+          mdbBtn,
+          mdbModal,
+          mdbModalHeader,
+          mdbModalTitle,
+          mdbModalBody,
+          mdbModalFooter,
+          mdbInput,
+          mdbTextarea
+        } from "mdbvue";
+        import Event from "@/components/Event";
+        import Notification from '@/components/Notification';
+        export default {
+          name: "App",
+          components: {
+            mdbContainer,
+            mdbRow,
+            mdbCol,
+            mdbIcon,
+            mdbBtn,
+            mdbModal,
+            mdbModalHeader,
+            mdbModalTitle,
+            mdbModalBody,
+            mdbModalFooter,
+            mdbInput,
+            mdbTextarea,
+            Event,
+            Notification
+          },
+          data() {
+            return {
+              events: [
+                {
+                  time: "10:00",
+                  title: "Breakfast with Simon",
+                  location: "Lounge Caffe",
+                  description: "Discuss Q3 targets"
+                },
+                {
+                  time: "10:30",
+                  title: "Daily Standup Meeting (recurring)",
+                  location: "Warsaw Spire Office"
+                },
+                {
+                  time: "11:00",
+                  title: "Call with HRs"
+                },
+                {
+                  time: "12:00",
+                  title: "Lunch with Timmoty",
+                  location: "Canteen",
+                  description: "Project evalutation"
+                }
+              ],
+              modal: false,
+              newValues: [],
+              status: ''
+            };
+          },
+          created() {
+            window.addEventListener('online', () => {
+              this.status = 'online';
+            });
+
+            window.addEventListener('offline', () => {
+              this.status = 'offline';
+            });
+          },
+          methods: {
+            handleDelete(eventIndex) {
+              this.events.splice(eventIndex, 1);
+            },
+            handleInput(val, type) {
+              this.newValues[type] = val;
+            },
+            addEvent() {
+              this.events.push({
+                time: this.newValues["time"],
+                title: this.newValues["title"],
+                location: this.newValues["location"],
+                description: this.newValues["description"]
+              });
+            }
+          }
+        };
+        &lt;/script&gt;
+      </code>
+      <code data-lang="js" data-name="src/componentsNotification.vue">
+        &lt;template&gt;
+          &lt;mdb-alert
+          v-if="isShown"
+          :color="availableStatuses[status].color"
+          enterAnimation="bounceIn"
+          leaveAnimation="slideOutRight"
+          &gt;
+            &lt;span
+            role="img"
+            aria-label="emoji"
+            &gt;
+            {{availableStatuses[status].emoji}}
+            &lt;/span&gt;
+            {{availableStatuses[status].text}}
+          &lt;/mdb-alert&gt;
+        &lt;/template&gt;
+
+        &lt;script&gt;
+        import { mdbAlert } from 'mdbvue';
+
+        export default {
+          name: "Notification",
+          components: {
+            mdbAlert
+          },
+          props: {
+            status: String
+          },
+          data() {
+            return {
+              availableStatuses: {
+                offline: {
+                  color: 'danger',
+                  emoji: '☢️',
+                  text: 'Offline mode engaged.'
+                },
+                online: {
+                  color: 'success',
+                  emoji: '👌',
+                  text: 'Back online!'
+                }
+              },
+              isShown: false
+            }
+          },
+          methods: {
+            showAlert() {
+              this.isShown = true;
+              const timeout = setTimeout(this.hideAlert, 3000);
+            },
+            hideAlert() {
+              this.isShown = false;
+            }
+          },
+          watch: {
+            status() {
+              this.showAlert();
+            }
+          }
+        }
+        &lt;/script&gt;
+
+        &lt;style&gt;
+        .alert {
+          position: absolute;
+          z-index: 2;
+          right: 0;
+        }
+
+        .alert span {
+          margin-right: 10px;
+        }
+        &lt;/style&gt;
+      </code>
+    </mdbsnippet>
+
+    <p class="description">Something doesn't work for you? Check the code for this lesson on our <a
+      href="https://github.com/mdbootstrap/Vue-Tutorial-PWA/archive/master.zip">repository</a></p>
+
+  </section>
+</section>

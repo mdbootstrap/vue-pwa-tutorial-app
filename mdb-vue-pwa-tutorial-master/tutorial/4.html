@@ -1,0 +1,274 @@
+<!--Section: Tutorial content-->
+<section class="tutorial" id="pwa-https">
+  <h2 class="title mb-4">
+    <strong>HTTPS & Service workers</strong>
+  </h2>
+
+  <p class="description">
+    Let's talk about the last two requirements that we need to meet before our app becomes installable - having it
+    served through <code>https</code> and do so accompanied by a <code>service worker</code>.</p>
+
+  <div class="text-center mt-5"> <img class="img-fluid"
+      src="https://mdbootstrap.com/wp-content/themes/mdbootstrap4/content/vue/tutorials/vue-pwa/4/banner.jpg"
+      alt="Install baner"></div>
+
+
+  <h4 class="mt-5"><strong>What is a service worker?</strong> </h4>
+
+  <p class="description">A service worker is a type of web worker, an exciting concept which has opened modern browsers
+    to the world of offline experiences. How? In short, it is a script that runs on a separate thread, independently
+    from the website. Why is it such a game-changer?</p>
+
+  <p class="description">During the first steps into the world of JavaScript, you probably saw how infinite
+    loops in the code affected the UI - namely, the JS-run functionalities became unreposnsive. They blocked "the main
+    thread" and then the interface froze.</p>
+
+  <p>It's all because JavaScript is a single threaded language. It means it has one call stack and one memory heap,
+    executing code in order. When things go south (like loops iterating endlessly or synchronous requests taking too
+    long), the whole thing topples, rendering the UI unresponsive.</p>
+
+  <p>The idea of a web worker is exciting, because it has its own thread, and so it can be performing heavy-lifting
+    tasks, which otherwise would reduce your website's performance, in the background. What's more, according to <a
+      href="https://www.w3.org/TR/workers/" target="_blank">the spec</a>, workers are able to be working for a long time
+    after the window responsible for its spawning has been closed (although it can take no more new tasks).</p>
+
+  <p>"Ok," someone could say, "so a service worker is like some additional computing power, but we get it anyhow, as the
+    hardware tech progresses." Workers would be a considerable boost with no clear direction, if it wasn't for one
+    architecural implication: they sit between the browser and the network and act as proxy servers. It means
+    that they not only get their own thread for computation, but also they do so while in between the client and the
+    server. They can intercept requests made by the website and <strong>redirect them to the cache</strong>. Imagine,
+    there is an outgoing request for constent and all the response get saved in the browser memory along the way,
+    dropping the need for requesting it again. Next time we are trying to access some of it, <strong>no internet
+      connection is needed</strong>.</p>
+
+  <p>This is where the service worker shines - as a vehicle for caching and data management. It can provide us with
+    content access and features like push notifications, even in case the internet connection was lost.</p>
+
+  <p>This kind of power comes with a price, though. This is a new technology, so it's only supported by modern browsers.
+    Also, as service workers could be easily misused, they use is restricted to running across HTTPS for security
+    reasons. Although during development we will be able to use a service worker through <code>localhost</code>, to
+    deploy it on a site, a <strong>HTTPS setup on your server</strong> will be needed.</p>
+
+  <p>Web workers are a huge topic by themselves and here I'll touch upon their bare, code-based essentials in the PWA
+    context - namely, how to register one, what it usually consists of and some tips on development. There are some
+    extensive <a href="https://developers.google.com/web/fundamentals/primers/service-workers/">materials</a> regarding
+    the subject prepared by the industry leaders - be sure to check them for a deep dive.</p>
+
+  <h4 class="mt-5"><strong>The File</strong> </h4>
+
+  <p>Service Worker is JavaScript code living in a different thread than the browser's main one, where the UI and and
+    rest of the JS resides. In that way, it is very special - for browsers to be able to adequately utilize it, it must
+    be properly registered (more on that below) and defined in a separate file. From there it does not have direct
+    access to reglar Web APIs, like the <code>window</code> global object.</p>
+
+  <p>What the worker does, in practive, is reacting to certain events - this is why the file itself consists mainly of
+    callbacks. To refer to itself from within the worker to add event listeners, the API exposes a <code>self</code>
+    variable, making it a little bit more reliable for beginners than the regular, dynamically bound <code>this</code>.
+  </p>
+
+  <mdbsnippet>
+    <code data-lang="js" data-name="./service-worker.js">
+      const cacheVersion = 'v1';
+
+      self.addEventListener('install', function (event) {
+        self.skipWaiting(); // We do it for our worker not to wait until the previous one expires
+
+        event.waitUntil(
+          caches.open(cacheVersion).then(function (cache) {
+            return cache.addAll([
+              './index.html'
+            ]);
+          })
+        );
+      });
+
+      self.addEventListener('fetch', function (event) {
+        event.respondWith(caches.match(event.request).then(function (response) {
+          // caches.match() always resolves
+          // but in case of success response will have value
+          if (response !== undefined) {
+            return response;
+          } else {
+            return fetch(event.request).then(function (response) {
+              // response may be used only once
+              // we need to save clone to put one copy in cache
+              // and serve second one
+              let responseClone = response.clone();
+
+              caches.open(cacheVersion).then(function (cache) {
+                cache.put(event.request, responseClone);
+              });
+              return response;
+            }).catch(function () {
+              return console.log('no cache response!');
+            });
+          }
+        }));
+      });
+    </code>
+  </mdbsnippet>
+
+  <p>As you can see, the worker above listens for two events.</p>
+
+  <p>The <code>install</code> event provides an opportunity to define the caching policy. First, we call
+    <code>self.skipWaiting();</code> so that our Worker gets to work instantly. Then, it opens a particular cache (named
+    <code>v1</code>) and uses the <code>cache.addAll()</code> method to add a list of specific files there. As of now,
+    we only cache <code>./index.html</code>.</p>
+
+  <p>What we have stored, we ultimately want to retrieve. To define the fashion in which it happens, <code>fetch</code>
+    event callback and response's <code>.respondWith()</code> method are used. In case there is an already stored
+    resource for a specific request (<code>caches.match(event.request)</code>) and it's not undefined, we retrieve it
+    and pass as the return value of the <code>fetch</code>. In case it is in fact undefined (so, not stored), we do a
+    request to the web for it, but immidiately it gets back, we clone it, so we can both store it in the cache and serve
+    it as a response.</p>
+
+  <p>With this worker script we cache what we need, and once the client gets back to us on a subsequent visit, the
+    resources it requested for in the past go straight from the cache -- and in case we get asked for something we do
+    not have stored yet, we fetch for it, to serve it and store for later.</p>
+
+  <h4 class="mt-5"><strong>The Registration</strong> </h4>
+
+  <p>For the above file to be considered a service worker and not a regular, "same-thread" JavaScript file, it must be
+    registered as such. We could do it wherever (including a rude <code>script</code> tag within HTML), but we'll do it
+    in the (webpack's & JavaScripts') entry point, namely the <code>src/main.js</code> file, tucked underneath the root
+    Vue insance.</p>
+
+  <mdbsnippet>
+    <code data-lang="js" data-name="./src/main.js">
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js').then(() => {
+          console.log('Service Worker registered!');
+      });
+      } else {
+        console.log('Service Worker not supported :(');
+      }
+    </code>
+  </mdbsnippet>
+
+  <p>In webdev practive, it would be worthwhile ensuring that what we do above, which still takes place on the main
+    thread, is not blocking us from rendering what we want to show. We could achieve it by simply wrapping the
+    registration into the the window's <code>load</code> event callback. Luckily, though, the webpack-transpiled
+    code is being injected at the end of the <code>&lt;body&gt;</code> tag, which suffices for a guarantee in our use
+    case.</p>
+
+  <h4 class="mt-5"><strong>Workflow twaeks</strong> </h4>
+
+  <p>With the <code>register</code> and <code>install</code> life-cycle steps accounted for, we have all the main
+    indridients for a successful service worker implementation. We might find an issue in the console regarding the
+    file's MIME type - apparently <code>service-worker.js</code> is not JS. What's more - clicking the link to the file
+    in the error description leads to opening up a new tab with our project! What is happening?</p>
+
+  <img class="img-fluid mr-2"
+    src="https://mdbootstrap.com/wp-content/themes/mdbootstrap4/content/vue/tutorials/vue-pwa/4/unsupported-MIME-type-error.png"
+    alt="MIME type error">
+
+  <p>The reason for this weird behavior lies in our webpack config. Let's start with the fact that
+    <code>webpack-dev-server</code>, a crucial part of our development environment, is not informed that there is a
+    JavaScript resource that should be available from within our running web server and, even more suprisingly, is to
+    not be processed by the bundler. This unavailability results in the puzzling side-effect: when we try to open the
+    file, we get redirected to our <code>./index.html</code>, so a new <code>localhost</code> tab within the browser. No
+    woneder the MIME types don't add up - in this mix-up, we end up trying to register a service worker while
+    providing a HTML file instead.</p>
+
+  <p>How to fix it? We know about the <code>/static</code> directory from where the resources are available for our
+    locally hosted environment. Moving <code>./service-worker.js</code> to there, where our <code>manifest.json</code>
+    already resides, seems like a good way to sneak it in. Unfortunately, getting it to work will not be as
+    straightforward.</p>
+
+  <p>Considering how <strong>powerful</strong> a feature the service worker is, there are security, anti-misuse measures
+    undertaken. One of them is the the service worker's <code>scope</code> - its property defining the exact reach
+    within a project. It oftentimes is assumed, defaulting to <code>{scope: '/'}</code>, but can be customized using
+    options object passed as the second argument in <code>navigator.serviceWorker.register()</code> function. It means
+    that you can have custom workers for different places of your web project!</p>
+
+  <p>Whatever the assumed or the declared scope is, however, there's a catch: service worker can never reach "up", so
+    outside the directory where the very file is held. So, putting it in the <code>/static</code> folder would mean it
+    can cache only the resources there, and never, say, our <code>./index.html</code> waiting outside. We have to make
+    the webpack config acknowlage the file instead.</p>
+
+  <p>To do it, we need to slightly alter our <code>dev</code> and <code>prod</code> webpack config files in the
+    <code>/build</code> directory. In both of them we are utilizing the <code>CopyWebpackPlugin</code> to move our files
+    around. Let's mention our service worker there - that way it will available both from within our dev server and the
+    <code>/dist</code> directory once we build.</p>
+
+  <mdbsnippet>
+    <code data-lang="js" data-name="./build/webpack.dev.config.js">
+      new CopyWebpackPlugin([
+        {
+          from: path.resolve(__dirname, '../static'),
+          to: config.dev.assetsSubDirectory,
+          ignore: ['.*']
+        },
+        {
+          from: path.resolve(__dirname, '../service-worker.js'),
+          to: './service-worker.js',
+        }
+      ])
+    </code>
+    <code data-lang="js" data-name="./build/webpack.prod.config.js">
+      new CopyWebpackPlugin([
+        {
+          from: path.resolve(__dirname, '../static'),
+          to: config.build.assetsSubDirectory,
+          ignore: ['.*']
+        },
+        {
+          from: path.resolve(__dirname, '../service-worker.js'),
+          to: './service-worker.js',
+        }
+      ])
+    </code>
+  </mdbsnippet>
+
+  <p>And voilà! Now we are declaratively giving access to the file to the webpack dev server, while also having the
+    worker script copied to the <code>/dist</code> when we build. You can check the worker we just registered out in the
+    <strong>Application</strong> tab in Chromium DevTools or at <code>about:debugging#/runtime/this-firefox</code> in
+    Firefox (simply copy and paste the string to the address bar).</p>
+
+  <h4 class="mt-5"><strong>Default PWA scaffolding with Vue-CLI</strong></h4>
+
+  <p>Our purpose here was to do everything by ourselves for learning purposes, but in everyday developer work we could
+    make use of some already existing tools for the job. For new projects we could prefer to exchange the fine-grained
+    control provided with a custom webpack config, for a ready-made, scaffolding solution of <a
+      href="https://cli.vuejs.org/guide/"><code>Vue-CLI</code></a>. The command line solution provides us with less "to
+    the metal" configuration options, as the bundler's roughness is hidden beneath the <code>vue-cli-service</code>
+    scripts' abstraction, while adding some helpful extras - a ready-made project strucutre and some great development
+    features, including a great PWA support plugin.</p>
+
+  <p>A project created this way would have a <code>src/registerServiceWorker.js</code> script included out-of-the-box.
+    Under the hood it would utilize <code><a
+        href="https://www.npmjs.com/package/register-service-worker">register-service-worker</a></code>, a module
+    created by Evan You, Vue author, that simplifies worker registration and provides hooks to customize worker's
+    reaction to some of the most common events, like caching, finding an update or going offline. It really makes life
+    easier when it is the quick prototyping we are after.</p>
+
+  <h4 class="mt-5"><strong>Serving over HTTPS</strong> </h4>
+
+  <p>Another requirement for rendering the App Installation Banner by the browser is having the project deployed on a
+    HTTPS-certified domain, which we have, thanks to Firebase Hosting. So, let's update our app: </p>
+
+  <mdbsnippet>
+    <code data-lang="js" data-name="CLI">
+      yarn deploy
+    </code>
+  </mdbsnippet>
+
+  <p>Now, let's test it. If you open your website, after a few seconds you should see an install banner. Install the
+    app.</p>
+
+  <div class="text-center"> <img class="img-fluid"
+      src="https://mdbootstrap.com/wp-content/themes/mdbootstrap4/content/vue/tutorials/vue-pwa/4/save.jpg"
+      alt="Install baner"></div>
+
+  <p>Do you see this? Our nice app icon is staring at us from the smartphone's home screen!</p>
+
+  <div class="text-center"> <img class="img-fluid"
+      src="https://mdbootstrap.com/wp-content/themes/mdbootstrap4/content/react/tutorials/react-pwa/4/homescreen.jpg"
+      alt="Homescren View"><br></div>
+
+  <p>In the next lesson, we will make our application work offline </p>
+
+  <p class="description">Something doesn't work for you? Then check the code for this lesson in our <a
+      href="https://github.com/mdbootstrap/Vue-Tutorial-PWA/archive/master.zip">repository</a></p>
+</section>
+<!--Section: Tutorial content

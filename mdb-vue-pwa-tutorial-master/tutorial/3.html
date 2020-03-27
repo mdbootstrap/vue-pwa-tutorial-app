@@ -1,0 +1,233 @@
+<!--Section: Tutorial content-->
+<section class="tutorial">
+  <section id="pwa-manifest">
+
+    <!--Title-->
+    <h2 class="title mb-4">
+      <strong>Making an app installable I: The Manifest</strong>
+    </h2>
+
+    <p class="description">
+      One of the most powerful functions that PWA offers is the ability to add our web app to a device's home screen.
+      This feature helps to bridge the gap between native and web apps, allowing for the latter to look and feel the
+      "native" way.
+    </p>
+
+    <p class="description">Surprisingly, <strong>it doesn't require a lot of work</strong>. We will cover everything in
+      the upcoming lessons.</p>
+
+    <p class="description">What the feature boils down to is presenting users with ability to install our
+      app onto their homescreens. In pratice, the ability takes form of an App Install Banner - a simple browser dialog.
+      According to <a href="https://developers.google.com/web/fundamentals/app-install-banners/">the official
+        documentation</a>, there
+      are only few requirements:</p>
+    <ul>
+      <li>The web app is not already installed</li>
+      <li>the user has interacted with the domain for at least 30 seconds</li>
+      <li>codebase includes a web app <code>manifest</code></li>
+      <li>App is served over HTTPS</li>
+      <li>Has registered a service worker with a fetch event handler (currently necessary for Chrome on Android only)
+      </li>
+    </ul>
+
+    <p>Of course the two first ones are beyond our control, it's the user who decides for how long the interactions
+      takes place or what is or isn't installed at their homescreens. As developers, we have to take care of the last
+      three. Let's begin with the app manifest.</p>
+
+    <h3 class="mt-5"><strong>What is an app manifest?</strong></h3>
+
+    <p>App manifest is a simple JSON file, describing some of the properties the app has to have defined to utilize the
+      PWA charm. In that, the file resembles an App Store description of a native app. It is possible that you have
+      already stumbled upon it in some other projects' directories, escpecially the ones created using
+      <code>vue-cli</code> or <code>create-react-app</code> boilerplate systems.</p>
+
+    <p>Minimal <code>manifest.json</code> consists of these fields:</p>
+    <ul>
+      <li><code>name</code> and <code>short_name</code> - either one. If both are provided, <code>short_name</code> is
+        used on the user's home screen, launcher, or other places where space may be limited. <code>name</code> is used
+        in the app install prompt.</li>
+      <li><code>icons</code> - an array of objects represening images, each with its <code>src</code>, <code>size</code>
+        and <code>type</code> fields. Must include 192px and 512px sized icons. Chrome will automatically scale the icon
+        for the device. If you'd prefer to scale your own icons and adjust them for pixel-perfection, provide icons in
+        increments of 48dp</li>
+      <li><code>start_url</code> - tells the browser where your application should start when it is launched, and
+        prevents the app from starting on whatever page the user was on when they added your app to their home screen.
+        Add a query string to the end of the start_url to track how often your installed app is launched</li>
+      <mdbsnippet>
+        <code data-lang="js" data-name="public/manifest.json">
+          "start_url": "/?utm_source=homescreen",
+        </code>
+      </mdbsnippet>
+      <li><code>display</code></li> must be one of: <code>fullscreen</code>, <code>standalone</code>, or
+      <code>minimal-ui</code>. It changes how much of browser UI is shown to the user and can range from "browser" (when
+      the full browser window is shown) to "fullscreen" (when the app is full-screened).
+    </ul>
+
+    <p>A full list of the supported properties which can be used is found <a
+        href="https://developer.mozilla.org/en-US/docs/Web/Manifest">here</a>.</p>
+
+    <p>
+      Now, armed with the necessary theoretical background, let's create a <code>manifest.json</code> file on our own!
+      Let's place it in the project's <code>/static</code> directory, hinting that we want to keep it as it is (static),
+      rather than having it somehow processed, as we do with the <code>.vue</code> files, for example. Doing so in there
+      means we no longer need the <code>.gitkeep</code> file, which was only ensuring the folder gets considered by the
+      contol system we can freely get rid of it.
+    </p>
+
+    <mdbsnippet>
+      <code data-lang="js" data-name="static/manifest.json">
+        {
+        "short_name": "Agenda App",
+        "name": "MDBootstrap Agenda App Demo",
+        "icons": [
+        {
+        "src": "icons/Icon-36.png",
+        "sizes": "36x36",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-48.png",
+        "sizes": "48x48",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-72.png",
+        "sizes": "72x72",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-96.png",
+        "sizes": "96x96",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-120.png",
+        "sizes": "120x120",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-144.png",
+        "sizes": "144x144",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-152.png",
+        "sizes": "152x152",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-167.png",
+        "sizes": "167x167",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-180.png",
+        "sizes": "180x180",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-192.png",
+        "sizes": "192x192",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-512.png",
+        "sizes": "512x512",
+        "type": "image/png"
+        },
+        {
+        "src": "icons/Icon-1024.png",
+        "sizes": "1024x1024",
+        "type": "image/png"
+        }
+        ],
+        "start_url": "./index.html",
+        "display": "standalone",
+        "background_color": "#000000",
+        "theme_color": "#4DBA87"
+        }
+      </code>
+    </mdbsnippet>
+
+    <h3 class="title mb-4">Icons</h3>
+
+    <p>
+      As you can see, the JSON file are referencing a number of images of different sizes we do not have yet. Why do we
+      even include them all? There is a world of screens waiting for our PWA to get installed, most of them have their
+      own size and pixel density. To be able to cover that means preparing these images up front and including them into
+      our web manifest. Let the app do the rest regarding picking a proper picture for viewing.
+    </p>
+
+    <blockquote class="blockquote bq-danger my-2">
+      <p class="bq-title">Note!</p>
+      <p>All the different sizes are mentioned to illustrate the possible pixel-perfect coverage purposes, which
+        exceed beyond a minimal manifest example. To satisfy Lighthouse PWA Audit, which is an important benchmark
+        (more on that in the upcoming lesson) you may want to start off small. In that case, I'd suggest beginning with
+        a 192x192px and a 512x512px-sized icons.</p>
+    </blockquote>
+
+    <p>
+      Let's break the list down. The <code>36x36</code>, <code>48x48</code>, <code>72x72</code>, <code>96x96</code>,
+      <code>144x144</code> and <code>192x192</code> pixels icons are optimized to be used on the Android platform; folks
+      at Google made sure these sizes would play well without getting pixelated or blurry. To cover all the Andoroid
+      needs, what we also need is a <code>512x512</code> - it's used for the splash-screens.
+    </p>
+
+    <p>
+      The sizes of icons for iOS platform are: <code>120x120</code>, <code>152x152</code>, <code>167x167</code> and
+      <code>180x180</code> pixels. It's the last one that covers the most current iOS guidelines - the others are
+      included for backward compatibility reasons. The final dimensions set you might need, <code>1024x1024</code>, is
+      used in the Apple App Store. Even though not many PWAs end up there, a large square icon might turn out handy, as
+      it can always get scaled down by the plarform.
+    </p>
+
+    <p>
+      You'd like to have your own icon, but you do not know where to start? When it comes to the very design, the same
+      best practices for <a href="https://material.io/design/iconography/#icon-treatments">any Android icon</a> should
+      be followed. In case you already have an icon for an app, but you think creating all these different files
+      manually is a drag - you are absolutely right! There are many online tools for creating necessary icon sets for
+      PWA - you may want to <a href="http://letmegooglethat.com/?q=pwa+icon+generator">research</a> your favorite one,
+      or let us provide you with a <a href="TODO">zip</a> so you don't have to. Add the (unzipped) <code>/icons </code>
+      folder into the <code>static/</code> directory.</p>
+
+    <h3 class="mt-5"><strong>Linking the manifest up</strong></h3>
+
+    <p>We are almost done here - the only thing that's left is actually letting the browser know the manifest is on
+      board by including it into the <code>&gt;head&lt;</code> tag of our <Code>./index.html</Code> file in the
+      project's root directory.</p>
+
+    <mdbsnippet>
+      <code data-lang="html" data-name="./index.html">
+
+        <head>
+          <meta charset="utf-8">
+          ...
+          <link rel="manifest" href="/static/manifest.json" />
+        </head>
+      </code>
+    </mdbsnippet>
+
+    <p>
+      After running <code>yarn build</code> or <code>yarn deploy</code>, you should see the <code>/static</code> folder
+      copy being instilled <strong>inside</strong> the <code>/dist</code> directory. Having the file structure copied
+      means the relative route, embedded explicitly in our HTML, stays the same, while the rest of the project gets
+      prepared for a deploy.
+    </p>
+
+    <p>
+      To see whether everything works, simply <code>yarn dev</code> the project and refer to the devtools console
+      (<code>F12</code> or <code>Ctrl</code> + <code>Shift</code> + <code>J</code> depending on the browser used). All
+      the possible problems with icon availability, caused by either a file mis-naming or improper JSON formatting
+      should be listed there. For more holistic approach towards testing the PWA-readiness of our app, stick with us for
+      an upcoming lesson regarding the audit.
+    </p>
+
+    <p>In the next lesson, we will take care of the two other criteria on the list - HTTPS and service worker.
+    </p>
+
+    <p class="description">Something doesn't work for you? Then check the code for this lesson on our <a
+        href="https://github.com/mdbootstrap/Vue-Tutorial-PWA/archive/master.zip">repository</a>!</p>
+
+  </section>
+</section>
+<!--Section: Tutorial content
